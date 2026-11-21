@@ -1,0 +1,26 @@
+{
+  "id": "./",
+  "name": "えき はかせ！｜しゅとけんの えきクイズ",
+  "short_name": "えき はかせ！",
+  "description": "ろせんの いろ・えきばんごう・かんじの えきめいを みて、3たくクイズに ちょうせん！",
+  "lang": "ja",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#e3f3ff",
+  "theme_color": "#dbf3ff",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ]
+}
