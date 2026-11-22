@@ -97,21 +97,25 @@ $('muteBtn').onclick=()=>{voice=!voice;$('muteBtn').textContent=voice?'🔊 こ�
 $('resetBtn').onclick=()=>{if(confirm('えきずかんの きろくを ぜんぶ けしますか？\n（この操作は元に戻せません）')){collected.clear();asked.clear();save(STORE,collected);save(ASKED,asked);progress();renderCollection()}};
 setupCategory();setupLines();progress();
 
-// オフラインで あそぶ ための じゅんび
+// iPhoneのホーム画面アプリでも起動ページをオフラインで確認する
 (async function registerOffline(){
  const box=document.getElementById('offlineStatus');
- if(!('serviceWorker' in navigator)){
+ if(!('serviceWorker' in navigator) || !('caches' in window)){
   if(box)box.textContent='📱 このブラウザは オフラインほぞんに たいおうしていないよ。';
   return;
  }
  try{
-  const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./'});
+  const reg=await navigator.serviceWorker.register('./sw.js',{scope:'./',updateViaCache:'none'});
   await navigator.serviceWorker.ready;
-  const cache=await caches.open('eki-hakase-pwa-v1');
-  const cached=await cache.match(new URL('./index.html',location.href).href);
-  if(box)box.textContent=cached?'✅ オフラインの じゅんびが できたよ！ ホームがめんに ついかしてね。':'📡 オフラインの じゅんびちゅう。ネットにつないで もういちど ひらいてね。';
+  // 対応する最新版の起動ページが保存されたことを確認する。
+  const cache=await caches.open('eki-hakase-pwa-v2');
+  const indexURL=new URL('./index.html',reg.scope).href;
+  const cached=await cache.match(indexURL);
+  if(box)box.textContent=cached
+   ? '✅ オフラインの じゅんびが できたよ！ ホームがめんの アイコンから ひらいてね。'
+   : '📡 アプリの ほぞんが まだ できていないよ。ネットに つないで ひらきなおしてね。';
  }catch(error){
-  if(box)box.textContent='📡 オフラインの じゅんびが できなかったよ。ネットにつないで もういちど ひらいてね。';
+  if(box)box.textContent='📡 オフラインの じゅんびが できなかったよ。ネットに つないで もういちど ひらいてね。';
   console.warn('オフライン登録に失敗しました',error);
  }
 })();

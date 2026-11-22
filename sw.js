@@ -1,23 +1,58 @@
-// えき はかせ！ PWA キャッシュ
-const CACHE_NAME = 'eki-hakase-pwa-v1';
-const APP_FILES = ['./', './index.html', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
+/* えき はかせ！：iPhoneホーム画面のオフライン起動修正版 */
+const CACHE_NAME = 'eki-hakase-pwa-v2';
+const APP_BASE = self.registration.scope;
+const INDEX_URL = new URL('index.html', APP_BASE).href;
+const ROOT_URL = new URL('./', APP_BASE).href;
+const ASSET_URLS = [
+  'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'
+].map(path => new URL(path, APP_BASE).href);
+
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_FILES)).then(() => self.skipWaiting()));
+ event.waitUntil((async () => {
+  const cache = await caches.open(CACHE_NAME);
+  // 起動に必要なHTMLを必須として保存。アイコンなどの失敗で起動を妨げない。
+  await cache.add(new Request(INDEX_URL, {cache: 'reload'}));
+  await Promise.allSettled(ASSET_URLS.map(url => cache.add(new Request(url, {cache: 'reload'}))));
+  await self.skipWaiting();
+ })());
 });
+
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('eki-hakase-pwa-') && k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+ event.waitUntil((async () => {
+  const keys = await caches.keys();
+  await Promise.all(keys.filter(key => key.startsWith('eki-hakase-pwa-') && key !== CACHE_NAME).map(key => caches.delete(key)));
+  await self.clients.claim();
+ })());
 });
+
 self.addEventListener('fetch', event => {
-  const req = event.request;
-  if(req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if(url.origin !== self.location.origin || !url.pathname.startsWith(new URL(self.registration.scope).pathname)) return;
-  if(req.mode === 'navigate'){
-    event.respondWith(fetch(req).then(res => {
-      if(res.ok){const clone=res.clone();event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.put('./index.html',clone)));}
-      return res;
-    }).catch(async () => (await caches.match('./index.html')) || Response.error()));
-  } else {
-    event.respondWith(caches.match(req).then(cached => cached || fetch(req)));
-  }
+ const req = event.request;
+ if(req.method !== 'GET') return;
+ const url = new URL(req.url);
+ if(url.origin !== self.location.origin || !url.href.startsWith(APP_BASE)) return;
+
+ if(req.mode === 'navigate') {
+  event.respondWith((async () => {
+   const cache = await caches.open(CACHE_NAME);
+   // Safariで「/」から保存されたアイコンも「index.html」から保存された
+   // アイコンも、オフラインでは同じ起動ページへ導く。
+   const cached = await cache.match(INDEX_URL);
+   if(cached) return cached;
+   try {
+    const response = await fetch(req);
+    if(response.ok) await cache.put(INDEX_URL, response.clone());
+    return response;
+   } catch (_) {
+    return Response.error();
+   }
+  })());
+  return;
+ }
+
+ if(url.href === INDEX_URL || url.href === ROOT_URL || ASSET_URLS.includes(url.href)) {
+  event.respondWith((async () => {
+   const cache = await caches.open(CACHE_NAME);
+   return await cache.match(url.href === ROOT_URL ? INDEX_URL : req) || fetch(req);
+  })());
+ }
 });
