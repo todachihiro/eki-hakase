@@ -1,5 +1,5 @@
 /* えき はかせ！：iPhoneホーム画面のオフライン起動修正版 */
-const CACHE_NAME = 'eki-hakase-pwa-v2';
+const CACHE_NAME = 'eki-hakase-pwa-v3';
 const APP_BASE = self.registration.scope;
 const INDEX_URL = new URL('index.html', APP_BASE).href;
 const ROOT_URL = new URL('./', APP_BASE).href;
